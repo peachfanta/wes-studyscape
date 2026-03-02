@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyScape Music Hub</title>
+  <style>
+    body { margin: 0; padding: 12px; font-family: system-ui, sans-serif; background: #f3f7ff; color: #1b2a42; }
+    .row { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+    select, button { padding: 8px; border-radius: 8px; border: 1px solid #c8d6ef; font: inherit; }
+    button { background: #3b76ff; color: #fff; border: 0; font-weight: 700; cursor: pointer; }
+    .ghost { background: #e8efff; color: #274b95; }
+    p { margin: 8px 0 0; font-size: 0.9rem; color: #4e617f; }
+    audio { width: 100%; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="row">
+    <select id="hub-track-select"><option value="">No tracks</option></select>
+    <button id="hub-toggle-btn">Play</button>
+  </div>
+  <audio id="hub-audio" controls></audio>
+  <p id="hub-status">Ready.</p>
+  <script>
+    const CHANNEL = "studyscape-music";
+    const HEARTBEAT_KEY = "studyscape.music.hub.heartbeat";
+    const DB_NAME = "studyscape-audio";
+    const DB_VERSION = 1;
+    const STORE = "libraries";
+    const LIB_KEY = "default";
+
+    const ch = "BroadcastChannel" in window ? new BroadcastChannel(CHANNEL) : null;
+    const els = {
+      select: document.getElementById("hub-track-select"),
+      toggle: document.getElementById("hub-toggle-btn"),
+      audio: document.getElementById("hub-audio"),
+      status: document.getElementById("hub-status")
+    };
+    let tracks = [];
+    let idx = -1;
+
+    init();
+
+    async function init() {
+      await hydrate();
+      bind();
+      beat();
+      setInterval(beat, 1000);
+      if (ch) {
+        ch.postMessage({ type: "STATE_UPDATE", playing: !els.audio.paused, index: idx, label: els.status.textContent });
+      }
+    }
+
+    function bind() {
+      els.select.addEventListener("change", () => selectTrack(Number(els.select.value)));
+      els.toggle.addEventListener("click", toggle);
+      els.audio.addEventListener("play", () => { els.toggle.textContent = "Pause"; publishState(); });
+      els.audio.addEventListener("pause", () => { els.toggle.textContent = "Play"; publishState(); });
+      els.audio.addEventListener("ended", () => { els.toggle.textContent = "Play"; publishState(); });
+      els.audio.addEventListener("timeupdate", publishState);
+      window.addEventListener("pagehide", () => localStorage.removeItem(HEARTBEAT_KEY));
+
+      if (ch) {
+        ch.onmessage = async (e) => {
+          const msg = e.data || {};
+          if (msg.type === "LIBRARY_SYNC" && Array.isArray(msg.tracks)) {
+            tracks = msg.tracks.map(t => ({ ...t, url: t.blob ? URL.createObjectURL(t.blob) : (t.dataUrl || "") }));
+            renderSelect();
+            await saveTracks(msg.tracks);
+            return;
+          }
+          if (msg.type === "SELECT") {
+            selectTrack(Number(msg.index));
+            return;
+          }
+          if (msg.type === "PLAY") { if (idx < 0 && tracks.length) selectTrack(0); els.audio.play().catch(() => {}); return; }
+          if (msg.type === "PAUSE") { els.audio.pause(); return; }
+          if (msg.type === "TOGGLE") { toggle(); return; }
+          if (msg.type === "STATE_REQUEST") { publishState(); }
+        };
+      }
+    }
+
+    function toggle() {
+      if (!tracks.length) return;
+      if (idx < 0) selectTrack(0);
+      if (els.audio.paused) els.audio.play().catch(() => {});
+      else els.audio.pause();
+    }
+
+    function selectTrack(i) {
+      if (!Number.isFinite(i) || i < 0 || i >= tracks.length) return;
+      idx = i;
+      els.audio.src = tracks[i].url;
+      els.audio.load();
+      els.select.value = String(i);
+      els.status.textContent = "Track: " + tracks[i].name;
+      publishState();
+    }
+
+    function renderSelect() {
+      els.select.innerHTML = "";
+      if (!tracks.length) {
+        const opt = document.createElement("option");
+        opt.value = "";
+        opt.textContent = "No tracks";
+        els.select.appendChild(opt);
+        return;
+      }
+      tracks.forEach((t, i) => {
+        const opt = document.createElement("option");
+        opt.value = String(i);
+        opt.textContent = t.name;
+        els.select.appendChild(opt);
+      });
+      if (idx >= 0 && idx < tracks.length) els.select.value = String(idx);
+      else selectTrack(0);
+    }
+
+    function publishState() {
+      if (!ch) return;
+      ch.postMessage({
+        type: "STATE_UPDATE",
+        playing: !els.audio.paused,
+        index: idx,
+        currentTime: Number.isFinite(els.audio.currentTime) ? els.audio.currentTime : 0,
+        label: els.status.textContent
+      });
+    }
+
+    function beat() {
+      localStorage.setItem(HEARTBEAT_KEY, String(Date.now()));
+    }
+
+    async function hydrate() {
+      const saved = await loadTracks();
+      if (saved.length) {
+        tracks = saved.map(t => ({ ...t, url: t.blob ? URL.createObjectURL(t.blob) : (t.dataUrl || "") }));
+        renderSelect();
+      }
+    }
+
+    function openDb() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: "id" });
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function loadTracks() {
+      try {
+        const db = await openDb();
+        const tracks = await new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE, "readonly");
+          const req = tx.objectStore(STORE).get(LIB_KEY);
+          req.onsuccess = () => resolve(req.result?.tracks || []);
+          req.onerror = () => reject(req.error);
+        });
+        db.close();
+        return Array.isArray(tracks) ? tracks : [];
+      } catch {
+        return [];
+      }
+    }
+
+    async function saveTracks(tracks) {
+      try {
+        const db = await openDb();
+        await new Promise((resolve, reject) => {
+          const tx = db.transaction(STORE, "readwrite");
+          tx.objectStore(STORE).put({ id: LIB_KEY, tracks });
+          tx.oncomplete = () => resolve();
+          tx.onerror = () => reject(tx.error);
+        });
+        db.close();
+      } catch {}
+    }
+  </script>
+</body>
+</html>

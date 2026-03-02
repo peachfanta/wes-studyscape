@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StudyScape - store</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="section-store">
+  <div class="bg-gradient" aria-hidden="true"></div>
+  <header class="topbar">
+    <div>
+      <p class="eyebrow">Gamified Dashboard</p>
+      <h1>StudyScape</h1>
+    </div>
+    <div class="meta-cards">
+      <article class="meta-card">
+        <p>Weekly Goal</p>
+        <strong id="weekly-goal-card">15.0h</strong>
+      </article>
+      <article class="meta-card">
+        <p>Balance</p>
+        <strong id="balance-card">$0</strong>
+      </article>
+      <article class="meta-card">
+        <p>Successful Weeks</p>
+        <strong id="success-card">0</strong>
+      </article>
+    </div>
+  </header>
+  <nav class="site-nav">
+    <a href="world.html">World</a>
+    <a href="timer.html">Timer</a>
+    <a href="calendar.html">Calendar</a>
+    <a href="tasks.html">Tasks</a>
+    <a href="store.html">Store</a>
+    <a href="analytics.html">Analytics</a>
+    <a href="music.html">Music</a>
+    <a href="sessions.html">Sessions</a>
+  </nav>
+
+  <main class="layout">
+    <section class="panel panel-world" data-section="world">
+      <div class="panel-title-row">
+        <h2>World Scene</h2>
+        <span id="world-stage-label" class="chip">Field</span>
+      </div>
+      <p class="muted">World progression depends only on successful study weeks (goal: 15h).</p>
+      <div class="inline-form">
+        <label class="muted" for="world-preview-slider">Preview stage</label>
+        <input id="world-preview-slider" type="range" min="1" max="30" step="1">
+        <button id="world-preview-reset" class="ghost" type="button">Use Real Progress</button>
+      </div>
+      <small id="world-preview-text" class="muted"></small>
+      <div class="world" id="world-scene">
+        <div class="world-sky"></div>
+        <div class="shape-layer layer-mountains" data-layer="mountains"></div>
+        <div class="shape-layer layer-ground" data-layer="ground-base">
+          <div class="ground-rect"></div>
+        </div>
+        <div class="shape-layer layer-roads" data-layer="roads"></div>
+        <div class="shape-layer layer-plants" data-layer="plants"></div>
+        <div class="shape-layer layer-trees" data-layer="trees"></div>
+        <div class="shape-layer layer-houses" data-layer="houses"></div>
+        <div class="shape-layer layer-town" data-layer="town"></div>
+        <div class="shape-layer layer-city" data-layer="city"></div>
+        <div class="shape-layer layer-skyline" data-layer="skyline"></div>
+      </div>
+      <div class="progress-row">
+        <div class="progress">
+          <div id="world-progress-bar"></div>
+        </div>
+        <small id="world-progress-text">0 / 30 weeks</small>
+      </div>
+    </section>
+
+    <section class="panel panel-timer" data-section="timer">
+      <div class="panel-title-row">
+        <h2>Weekly Study Timer</h2>
+        <span id="timer-status" class="chip">Paused</span>
+      </div>
+      <div class="timer-display" id="timer-display">00:00:00</div>
+      <div class="timer-actions">
+        <button id="start-timer-btn">Start</button>
+        <button id="pause-timer-btn" class="ghost">Pause</button>
+      </div>
+      <div class="goal-info">
+        <p><strong id="weekly-hours-text">0.0h</strong> / 15.0h this week</p>
+        <div class="progress">
+          <div id="weekly-progress-bar"></div>
+        </div>
+      </div>
+      <p class="muted">Successful weeks: <strong id="weekly-success-count">0</strong></p>
+      <p class="muted">Timer resets Monday 00:00 (local time).</p>
+    </section>
+
+    <section class="panel" data-section="calendar">
+      <div class="panel-title-row">
+        <h2>Compass Calendar Sync</h2>
+      </div>
+      <form id="ics-form" class="inline-form">
+        <input id="ics-url" type="url" placeholder="Paste ICS calendar URL">
+        <button type="submit">Sync</button>
+      </form>
+      <p id="ics-status" class="muted"></p>
+      <small id="calendar-meta" class="muted"></small>
+      <form id="calendar-event-form" class="inline-form">
+        <input id="custom-title" type="text" placeholder="My event title" required>
+        <input id="custom-start" type="datetime-local" required>
+        <input id="custom-end" type="datetime-local" placeholder="End (optional)">
+        <label class="muted sac-toggle"><input id="custom-sac" type="checkbox"> SAC</label>
+        <button type="submit">Add Event</button>
+      </form>
+      <div class="next-class-card">
+        <p>Next Class</p>
+        <strong id="next-class-title">None</strong>
+        <small id="next-class-countdown">-</small>
+      </div>
+      <h3>Monthly Calendar</h3>
+      <div class="inline-form">
+        <button id="month-prev" class="ghost" type="button">Prev</button>
+        <strong id="month-label">Month</strong>
+        <button id="month-next" class="ghost" type="button">Next</button>
+      </div>
+      <div id="month-grid" class="month-grid"></div>
+      <h3 id="month-day-label">Selected Day Events</h3>
+      <ul id="month-day-events" class="list"></ul>
+      <h3>My Calendar Items</h3>
+      <ul id="custom-event-list" class="list"></ul>
+      <h3>Today's Classes</h3>
+      <ul id="today-classes" class="list"></ul>
+      <h3>Weekly Timetable</h3>
+      <div id="week-grid" class="week-grid"></div>
+    </section>
+
+    <section class="panel" data-section="tasks">
+      <div class="panel-title-row">
+        <h2>Tasks</h2>
+      </div>
+      <form id="task-form" class="task-form">
+        <input id="task-name" type="text" placeholder="Task name" required>
+        <input id="task-duration" type="number" min="5" step="5" placeholder="Duration (mins)" required>
+        <button type="submit">Add Task</button>
+      </form>
+      <p class="muted">Task Balance: <strong id="task-balance">$0</strong></p>
+      <ul id="task-list" class="list"></ul>
+    </section>
+
+    <section class="panel" data-section="store">
+      <div class="panel-title-row">
+        <h2>Store</h2>
+      </div>
+      <p class="muted">Cosmetic upgrades only. These do not affect world progression.</p>
+      <button id="clear-store-preview" class="ghost" type="button">Clear Preview</button>
+      <div id="store-grid" class="store-grid"></div>
+    </section>
+
+    <section class="panel" data-section="analytics">
+      <div class="panel-title-row">
+        <h2>Analytics</h2>
+      </div>
+      <div class="analytics-metrics">
+        <article class="metric">
+          <p>Total Successful Weeks</p>
+          <strong id="analytics-total-success">0</strong>
+        </article>
+        <article class="metric">
+          <p>Current Week Hours</p>
+          <strong id="analytics-current-hours">0.0h</strong>
+        </article>
+      </div>
+      <p id="analytics-ratio">0 successful weeks out of 0 total weeks</p>
+      <div class="chart-wrap">
+        <canvas id="study-chart" width="800" height="260"></canvas>
+      </div>
+      <h3>Weekly Success History</h3>
+      <ul id="weekly-success-history" class="list"></ul>
+    </section>
+
+    <section class="panel" data-section="music">
+      <div class="panel-title-row">
+        <h2>Music Player</h2>
+      </div>
+      <div class="music-controls">
+        <input id="audio-upload" type="file" accept="audio/*" multiple>
+        <select id="track-select"><option value="">No uploaded tracks</option></select>
+        <button id="play-pause-btn" type="button">Play</button>
+        <button id="open-persistent-player" class="ghost" type="button">Open Persistent Player</button>
+      </div>
+      <audio id="audio-player" controls></audio>
+      <p id="track-label" class="muted">No track loaded.</p>
+      <div class="spotify-row">
+        <input id="spotify-link" type="url" placeholder="Paste Spotify embed or share link">
+        <button id="save-spotify-btn">Embed</button>
+      </div>
+      <p id="spotify-status" class="muted"></p>
+      <div id="spotify-embed-wrap"></div>
+    </section>
+
+    <section class="panel" data-section="sessions">
+      <div class="panel-title-row">
+        <h2>Session History</h2>
+      </div>
+      <ul id="session-list" class="list"></ul>
+    </section>
+  </main>
+
+  <template id="task-template">
+    <li class="task-item">
+      <label>
+        <input type="checkbox">
+        <span class="task-title"></span>
+      </label>
+      <small class="task-meta"></small>
+    </li>
+  </template>
+
+  <script src="script.js"></script>
+</body>
+</html>
