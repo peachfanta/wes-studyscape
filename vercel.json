@@ -1,0 +1,6 @@
+{
+  "rewrites": [
+    { "source": "/", "destination": "/studyscape/index.html" },
+    { "source": "/(.*)", "destination": "/studyscape/$1" }
+  ]
+}
